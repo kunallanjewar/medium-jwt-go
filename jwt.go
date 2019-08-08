@@ -131,16 +131,14 @@ func (sjwt *SignedJWT) encodeSign() (string, error) {
 		return "", err
 	}
 
-	header := strings.TrimRight(base64.StdEncoding.EncodeToString(h), "=")
-	payload := strings.TrimRight(base64.StdEncoding.EncodeToString(p), "=")
+	header := base64.RawURLEncoding.EncodeToString(h)
+	payload := base64.RawURLEncoding.EncodeToString(p)
 
-	headerPayload := header + "." + payload
-	sig, err := sjwt.signer.Sign(strings.NewReader(headerPayload))
+	sig, err := sjwt.signer.Sign(strings.NewReader(header + "." + payload))
 	if err != nil {
 		return "", err
 	}
+	signature := base64.RawURLEncoding.EncodeToString(sig)
 
-	signature := strings.TrimRight(base64.StdEncoding.EncodeToString(sig), "=")
-
-	return headerPayload + "." + signature, nil
+	return (header + "." + payload + "." + signature), nil
 }
