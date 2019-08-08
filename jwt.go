@@ -1,10 +1,21 @@
 package jwt
 
-import "io"
+import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io"
+	"strings"
+)
 
 const (
-	HeaderRS256   = "RS256"
-	HeaderTypeJWT = "jwt"
+	// HeaderAlgoRS256 is the algorithm this package
+	// uses for jwt signing and verification.
+	HeaderAlgoRS256 = "RS256"
+
+	// HeaderTypeJWT is the header attached to the jwt
+	// to identify jwt's type.
+	HeaderTypeJWT = "JWT"
 )
 
 // Header defines the algorithm and type of Base64 encoded object.
@@ -46,36 +57,6 @@ type User struct {
 // A Base64 encoded string.
 type Signature io.Reader
 
-type ParseJwt struct {
-	header    *Header
-	payload   *Payload
-	signature *Signature
-}
-
-type JWT struct {
-	*ParseJwt
-}
-
-// NewWithPayload creates a *JWT and sets headers.
-func NewWithPayload(p *Payload) *JWT {
-	return &JWT{
-		ParseJwt: &ParseJwt{
-			payload: p,
-			header: &Header{
-				Algorithm: HeaderRS256,
-				Type:      HeaderTypeJWT,
-			},
-		},
-	}
-}
-
-// SignedJWT encodes, signs, and returns signed jwt string.
-// Note: This method only supports RS256 algorithm for signing,
-// a.k.a RSA PKCS#1 signature with SHA-256.
-func (jwt *JWT) SignedJWT() (string, error) {
-	return "TODO", nil
-}
-
 // Signer signs bytes with RSA256 algorithm.
 type Signer interface {
 	Sign(bytesToSign io.Reader) ([]byte, error)
@@ -85,4 +66,81 @@ type Signer interface {
 // Returns error if verification is failed.
 type Verifier interface {
 	Verify(bytesToVerify io.Reader) error
+}
+
+// JWT consists of header, payload, and signature.
+type JWT struct {
+	header    *Header
+	payload   *Payload
+	signature *Signature
+}
+
+// ParseJwt knows hows to parse a jwt and
+// verify it's signature.
+type ParseJwt struct {
+	*JWT
+	verifier Verifier
+}
+
+// NewParseJwt creates a *ParseJwt.
+func NewParseJwt() (*ParseJwt, error) {
+	return nil, errors.New("TODO")
+}
+
+// Verify verifies a jwt signature.
+// Return error if signature doesn't match.
+func (pjwt *ParseJwt) Verify(jwt io.Reader) error {
+	return errors.New("TODO")
+}
+
+// SignedJWT knows how to create and sign a jwt.
+type SignedJWT struct {
+	*JWT
+	signer Signer
+}
+
+// NewWithPayload creates a *SignedJWT and sets default headers.
+func NewWithPayload(p *Payload, s Signer) (*SignedJWT, error) {
+	return &SignedJWT{
+		JWT: &JWT{
+			header: &Header{
+				Algorithm: HeaderAlgoRS256,
+				Type:      HeaderTypeJWT,
+			},
+			payload: p,
+		},
+		signer: s,
+	}, nil
+}
+
+// SignedJWT encodes, signs, and returns signed jwt string.
+// Note: This method only supports RS256 algorithm for signing,
+// a.k.a RSA PKCS#1 signature with SHA-256.
+func (sjwt *SignedJWT) SignedJWT() (string, error) {
+	return sjwt.encodeSign()
+}
+
+func (sjwt *SignedJWT) encodeSign() (string, error) {
+	h, err := json.Marshal(sjwt.header)
+	if err != nil {
+		return "", err
+	}
+
+	p, err := json.Marshal(sjwt.payload)
+	if err != nil {
+		return "", err
+	}
+
+	header := strings.TrimRight(base64.StdEncoding.EncodeToString(h), "=")
+	payload := strings.TrimRight(base64.StdEncoding.EncodeToString(p), "=")
+
+	headerPayload := header + "." + payload
+	sig, err := sjwt.signer.Sign(strings.NewReader(headerPayload))
+	if err != nil {
+		return "", err
+	}
+
+	signature := strings.TrimRight(base64.StdEncoding.EncodeToString(sig), "=")
+
+	return headerPayload + "." + signature, nil
 }

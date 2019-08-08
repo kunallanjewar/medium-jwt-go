@@ -25,7 +25,7 @@ func NewMethodRSA(privKey, pubKey io.Reader) (*MethodRSA, error) {
 	if err != nil {
 		return nil, err
 	}
-	prv, err := parsePrivateKeyFromReader(buf)
+	prv, err := privateKeyFromPem(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func NewMethodRSA(privKey, pubKey io.Reader) (*MethodRSA, error) {
 	if err != nil {
 		return nil, err
 	}
-	pub, err := parsePublicKeyFromReader(buf)
+	pub, err := publicKeyFromPem(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func NewMethodRSA(privKey, pubKey io.Reader) (*MethodRSA, error) {
 	}, nil
 }
 
-func parsePrivateKeyFromReader(pemFile []byte) (*rsa.PrivateKey, error) {
+func privateKeyFromPem(pemFile []byte) (*rsa.PrivateKey, error) {
 	pemBlock, _ := pem.Decode(pemFile)
 	if pemBlock == nil {
 		return nil, fmt.Errorf("error decoding key")
@@ -60,7 +60,7 @@ func parsePrivateKeyFromReader(pemFile []byte) (*rsa.PrivateKey, error) {
 	return key, nil
 }
 
-func parsePublicKeyFromReader(pemFile []byte) (*rsa.PublicKey, error) {
+func publicKeyFromPem(pemFile []byte) (*rsa.PublicKey, error) {
 	pemBlock, _ := pem.Decode(pemFile)
 	if pemBlock == nil {
 		return nil, fmt.Errorf("error decoding key")
@@ -89,7 +89,7 @@ func (r *MethodRSA) Sign(bytesToSign io.Reader) ([]byte, error) {
 }
 
 // Verify verifies bytesToVerify using a RS256 signature.
-// Return error is verification is failed.
+// Returns error if verification is failed.
 func (r *MethodRSA) Verify(bytesToVerify, signature io.Reader) error {
 	buf, err := ioutil.ReadAll(bytesToVerify)
 	if err != nil {
